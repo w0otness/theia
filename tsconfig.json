@@ -61,6 +61,9 @@
       "@theia/debug/lib/*": [
         "packages/debug/src/*"
       ],
+      "@theia/debug-cortex/lib/*": [
+        "packages/debug-cortex/src/*"
+      ],
       "@theia/debug-nodejs/lib/*": [
         "packages/debug-nodejs/src/*"
       ],

@@ -10,6 +10,7 @@
     "@theia/core": "^0.3.15",
     "@theia/cpp": "^0.3.15",
     "@theia/debug": "^0.3.15",
+    "@theia/debug-cortex": "^0.3.15",
     "@theia/debug-nodejs": "^0.3.15",
     "@theia/editor": "^0.3.15",
     "@theia/editorconfig": "^0.3.15",
