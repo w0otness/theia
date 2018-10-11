@@ -32,11 +32,11 @@ import { CppBuildConfigurationsStatusBarElement } from './cpp-build-configuratio
 export default new ContainerModule(bind => {
     bind(CommandContribution).to(CppCommandContribution).inSingletonScope();
     bind(CppKeybindingContext).toSelf().inSingletonScope();
-    bind(KeybindingContext).toDynamicValue(context => context.container.get(CppKeybindingContext));
+    bind(KeybindingContext).toService(CppKeybindingContext);
     bind(KeybindingContribution).to(CppKeybindingContribution).inSingletonScope();
 
     bind(CppLanguageClientContribution).toSelf().inSingletonScope();
-    bind(LanguageClientContribution).toDynamicValue(ctx => ctx.container.get(CppLanguageClientContribution));
+    bind(LanguageClientContribution).toService(CppLanguageClientContribution);
 
     bind(CppBuildConfigurationManager).toSelf().inSingletonScope();
     bind(CppBuildConfigurationChanger).toSelf().inSingletonScope();

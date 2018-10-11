@@ -100,7 +100,7 @@ function bindDebugWidget(bind: interfaces.Bind): void {
     })).inSingletonScope();
 
     bind(DebugFrontendContribution).toSelf().inSingletonScope();
-    bind(FrontendApplicationContribution).toDynamicValue(ctx => ctx.container.get(DebugFrontendContribution));
+    bind(FrontendApplicationContribution).toService(DebugFrontendContribution);
     bind(DebugSelectionService).toSelf().inSingletonScope();
 }
 
@@ -111,7 +111,7 @@ function bindBreakpointsManager(bind: interfaces.Bind): void {
     bind(BreakpointStorage).toSelf().inSingletonScope();
     bind(BreakpointsApplier).toSelf().inSingletonScope();
     bind(BreakpointsManager).toSelf().inSingletonScope();
-    bind(FrontendApplicationContribution).toDynamicValue(ctx => ctx.container.get(BreakpointsManager));
+    bind(FrontendApplicationContribution).toService(BreakpointsManager);
     bind(SourceOpener).toSelf().inSingletonScope();
 }
 
@@ -141,11 +141,11 @@ function createDebugTargetContainer(context: interfaces.Context, sessionId: stri
 
     child.unbind(TreeModelImpl);
     child.bind(DebugVariableModel).toSelf();
-    child.rebind(TreeModel).toDynamicValue(ctx => ctx.container.get(DebugVariableModel));
+    child.rebind(TreeModel).toService(DebugVariableModel);
 
     child.unbind(TreeImpl);
     child.bind(DebugVariablesTree).toSelf();
-    child.rebind(Tree).toDynamicValue(ctx => ctx.container.get(DebugVariablesTree));
+    child.rebind(Tree).toService(DebugVariablesTree);
 
     child.unbind(TreeWidget);
     child.bind(DebugVariablesWidget).toSelf();

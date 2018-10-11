@@ -32,7 +32,7 @@ export function createConsoleContentContainer(parent: interfaces.Container): Con
 
     child.unbind(TreeImpl);
     child.bind(ConsoleContentTree).toSelf();
-    child.rebind(Tree).toDynamicValue(ctx => ctx.container.get(ConsoleContentTree));
+    child.rebind(Tree).toService(ConsoleContentTree);
 
     child.unbind(TreeWidget);
     child.bind(ConsoleContentWidget).toSelf();
