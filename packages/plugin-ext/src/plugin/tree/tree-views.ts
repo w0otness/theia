@@ -30,22 +30,22 @@ export class TreeViewsExtImpl implements TreeViewsExt {
         this.proxy = rpc.getProxy(PLUGIN_RPC_CONTEXT.TREE_VIEWS_MAIN);
     }
 
-    registerTreeDataProvider<T>(viewId: string, treeDataProvider: TreeDataProvider<T>): Disposable {
-        const treeView = this.createTreeView(viewId, { treeDataProvider });
+    registerTreeDataProvider<T>(treeViewId: string, treeDataProvider: TreeDataProvider<T>): Disposable {
+        const treeView = this.createTreeView(treeViewId, { treeDataProvider });
 
         return Disposable.create(() => {
-            this.treeViews.delete(viewId);
+            this.treeViews.delete(treeViewId);
             treeView.dispose();
         });
     }
 
-    createTreeView<T>(viewId: string, options: { treeDataProvider: TreeDataProvider<T> }): TreeView<T> {
+    createTreeView<T>(treeViewId: string, options: { treeDataProvider: TreeDataProvider<T> }): TreeView<T> {
         if (!options || !options.treeDataProvider) {
             throw new Error('Options with treeDataProvider is mandatory');
         }
 
-        const treeView = new TreeViewExtImpl(viewId, options.treeDataProvider, this.proxy);
-        this.treeViews.set(viewId, treeView);
+        const treeView = new TreeViewExtImpl(treeViewId, options.treeDataProvider, this.proxy);
+        this.treeViews.set(treeViewId, treeView);
 
         return {
             get onDidExpandElement() {
@@ -63,30 +63,40 @@ export class TreeViewsExtImpl implements TreeViewsExt {
             reveal: (element: T, _options: { select?: boolean }): Thenable<void> => treeView.reveal(element, _options),
 
             dispose: () => {
-                this.treeViews.delete(viewId);
+                this.treeViews.delete(treeViewId);
                 treeView.dispose();
             }
         };
 
     }
 
-    async $getChildren(treeViewId: string): Promise<TreeViewItem[] | undefined> {
-        console.log('PLUGIN: $getChildren', treeViewId);
+    async $getChildren(treeViewId: string, treeItemId: string): Promise<TreeViewItem[] | undefined> {
+        console.log('PLUGIN: $getChildren > treeViewId[ ' + treeViewId + ' ] treeItemId[ ' + treeItemId + ' ]');
 
         const treeView = this.treeViews.get(treeViewId);
         if (!treeView) {
             throw new Error('No tree view with id' + treeViewId);
         }
 
-        return treeView.getChildren();
+        return treeView.getChildren(treeItemId);
     }
 
-    async $setExpanded(treeViewId: string): Promise<any> {
-        console.log('PLUGIN: $setExpanded', treeViewId);
+    async $setExpanded(treeViewId: string, treeItemId: string): Promise<any> {
+        console.log('PLUGIN: $setExpanded > treeViewId[ ' + treeViewId + ' ] treeItemId[ ' + treeItemId + ' ]');
+
+        const treeView = this.treeViews.get(treeViewId);
+        if (!treeView) {
+            throw new Error('No tree view with id' + treeViewId);
+        }
     }
 
-    async $setSelection(treeViewId: string): Promise<any> {
-        console.log('PLUGIN: $setSelection', treeViewId);
+    async $setSelection(treeViewId: string, treeItemId: string): Promise<any> {
+        console.log('PLUGIN: $setSelection > treeViewId[ ' + treeViewId + ' ] treeItemId[ ' + treeItemId + ' ]');
+
+        const treeView = this.treeViews.get(treeViewId);
+        if (!treeView) {
+            throw new Error('No tree view with id' + treeViewId);
+        }
     }
 
 }
@@ -102,6 +112,8 @@ class TreeViewExtImpl<T> extends Disposable {
     private selection: T[] = [];
     get selectedElements(): T[] { return this.selection; }
 
+    private cache: Map<string, T> = new Map<string, T>();
+
     constructor(treeViewId: string, private treeDataProvider: TreeDataProvider<T>, proxy: TreeViewsMain) {
         super(() => {
             this.dispose();
@@ -111,16 +123,16 @@ class TreeViewExtImpl<T> extends Disposable {
 
         if (treeDataProvider.onDidChangeTreeData) {
             treeDataProvider.onDidChangeTreeData((e: T) => {
-                console.log('> onDidChangeTreeData !!!!');
+                proxy.$refresh(treeViewId);
             });
         }
     }
 
     dispose() {
-        console.log('> disposing...');
     }
 
     async reveal(element: T, options?: { select?: boolean }): Promise<void> {
+        // temporary reply with OK
         await this.delay(1000);
     }
 
@@ -132,21 +144,67 @@ class TreeViewExtImpl<T> extends Disposable {
         });
     }
 
-    async getChildren(): Promise<TreeViewItem[] | undefined> {
-        const result = await this.treeDataProvider.getChildren();
+    idCounter: number = 0;
+
+    generateId(): string {
+        this.idCounter++;
+        return 'item-' + this.idCounter;
+    }
+
+    async getChildren(itemId: string): Promise<TreeViewItem[] | undefined> {
+        // get element from a cache
+        const cachedElement: T | undefined = this.cache.get(itemId);
+
+        // ask data provider for children for cached element
+        const result = await this.treeDataProvider.getChildren(cachedElement);
 
         if (result) {
             const treeItems: TreeViewItem[] = [];
             const promises = result.map(async value => {
+
+                // Generate the ID
+                // ID is used for caching the element
+                const id = this.generateId();
+
+                // Add element to the cache
+                this.cache.set(id, value);
+
+                // Ask data provider for a tree item for the value
+                // Data provider must return theia.TreeItem
                 const treeItem = await this.treeDataProvider.getTreeItem(value);
 
+                // Convert theia.TreeItem to the TreeViewItem
+
+                // Take a label
                 let label = treeItem.label;
+
+                // Use resource URI if label is not set
                 if (!label && treeItem.resourceUri) {
-                    label = treeItem.resourceUri.toString();
+                    label = treeItem.resourceUri.path.toString();
+                    label = decodeURIComponent(label);
+                    if (label.indexOf('/') >= 0) {
+                        label = label.substring(label.lastIndexOf('/') + 1);
+                    }
+                }
+
+                // Use item ID if item label is still not set
+                if (!label) {
+                    label = id;
+                }
+
+                // Take the icon
+                // currently only icons from font-awesome are supported
+                let icon = undefined;
+                if (typeof treeItem.iconPath === 'string') {
+                    icon = treeItem.iconPath;
                 }
 
                 const treeViewItem = {
-                    label: label
+                    id,
+                    label: label,
+                    icon,
+                    tooltip: treeItem.tooltip,
+                    collapsibleState: treeItem.collapsibleState
                 } as TreeViewItem;
 
                 treeItems.push(treeViewItem);

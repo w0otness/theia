@@ -323,23 +323,41 @@ export interface TreeViewsMain {
 }
 
 export interface TreeViewsExt {
-    $getChildren(treeViewId: string): Promise<TreeViewItem[] | undefined>;
-    $setExpanded(treeViewId: string): Promise<any>;
-    $setSelection(treeViewId: string): Promise<any>;
+    $getChildren(treeViewId: string, treeItemId: string | undefined): Promise<TreeViewItem[] | undefined>;
+    $setExpanded(treeViewId: string, treeItemId: string): Promise<any>;
+    $setSelection(treeViewId: string, treeItemId: string): Promise<any>;
 }
 
 export class TreeViewItem {
+
+    id: string;
 
     label: string;
 
     icon?: string;
 
-    resourceUri?: string;
-
     tooltip?: string;
 
-    collapsibleState?: theia.TreeItemCollapsibleState;
+    collapsibleState?: TreeViewItemCollapsibleState;
 
+}
+
+/**
+ * Collapsible state of the tree item
+ */
+export enum TreeViewItemCollapsibleState {
+    /**
+     * Determines an item can be neither collapsed nor expanded. Implies it has no children.
+     */
+    None = 0,
+    /**
+     * Determines an item is collapsed
+     */
+    Collapsed = 1,
+    /**
+     * Determines an item is expanded
+     */
+    Expanded = 2
 }
 
 export interface WindowStateExt {
