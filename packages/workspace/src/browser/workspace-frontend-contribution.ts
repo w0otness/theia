@@ -17,7 +17,7 @@
 import { injectable, inject } from 'inversify';
 import { CommandContribution, CommandRegistry, MenuContribution, MenuModelRegistry } from '@theia/core/lib/common';
 import { open, OpenerService, CommonMenus, StorageService, LabelProvider, ConfirmDialog, KeybindingRegistry, KeybindingContribution } from '@theia/core/lib/browser';
-import { FileStatNode, FileDialogService, OpenFileDialogProps } from '@theia/filesystem/lib/browser';
+import { FileDialogService, OpenFileDialogProps } from '@theia/filesystem/lib/browser';
 import { FileSystem } from '@theia/filesystem/lib/common';
 import { WorkspaceService, THEIA_EXT, VSCODE_EXT } from './workspace-service';
 import { WorkspaceCommands } from './workspace-commands';
@@ -102,24 +102,28 @@ export class WorkspaceFrontendContribution implements CommandContribution, Keybi
 
     protected doOpen(): void {
         this.workspaceService.roots.then(async roots => {
-            const node = await this.fileDialogService.showOpenDialog({
+            const uri = await this.fileDialogService.showOpenDialog({
                 title: WorkspaceCommands.OPEN.label!,
                 canSelectFolders: true,
                 canSelectFiles: true
             }, roots[0]);
-            this.doOpenFileOrFolder(node);
+            this.doOpenFileOrFolder(uri);
         });
     }
 
-    protected doOpenFileOrFolder(node: Readonly<FileStatNode> | undefined): void {
-        if (!node) {
+    protected doOpenFileOrFolder(uri: URI | undefined): void {
+        if (!uri) {
             return;
         }
-        if (node.fileStat.isDirectory) {
-            this.workspaceService.open(node.uri);
-        } else {
-            open(this.openerService, node.uri);
-        }
+        this.fileSystem.getFileStat(uri.toString()).then(stat => {
+            if (stat) {
+                if (stat.isDirectory) {
+                    this.workspaceService.open(uri);
+                } else {
+                    open(this.openerService, uri);
+                }
+            }
+        });
     }
 
     protected async openWorkspace(): Promise<void> {
@@ -139,7 +143,7 @@ export class WorkspaceFrontendContribution implements CommandContribution, Keybi
         const selected = await this.fileDialogService.showOpenDialog(option);
         if (selected) {
             // open the selected directory, or recreate a workspace from the selected file
-            this.workspaceService.open(selected.uri);
+            this.workspaceService.open(selected);
         }
     }
 

@@ -80,7 +80,7 @@ export class Endpoint {
         return this.httpScheme === Endpoint.PROTO_HTTPS ? Endpoint.PROTO_WSS : Endpoint.PROTO_WS;
     }
 
-    protected get httpScheme() {
+    get httpScheme() {
         if (this.options.httpScheme) {
             return this.options.httpScheme;
         }

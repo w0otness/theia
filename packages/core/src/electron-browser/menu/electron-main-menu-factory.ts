@@ -116,7 +116,9 @@ export class ElectronMainMenuFactory {
         return items;
     }
 
-    /* Return a user visble representation of a keybinding.  */
+    /**
+     * Return a user visible representation of a keybinding.
+     */
     protected acceleratorFor(keybinding: Keybinding) {
         const keyCodesString = keybinding.keybinding.split(' ');
         let result = '';
@@ -173,11 +175,17 @@ export class ElectronMainMenuFactory {
         return result;
     }
 
-    protected execute(command: string): void {
-        this.commandRegistry.executeCommand(command).catch(() => { /* no-op */ });
-        if (this.commandRegistry.isVisible(command)) {
-            this._menu.getMenuItemById(command).checked = this.commandRegistry.isToggled(command);
-            electron.remote.getCurrentWindow().setMenu(this._menu);
+    protected async execute(command: string): Promise<void> {
+        try {
+            if (this.commandRegistry.isEnabled(command)) {
+                await this.commandRegistry.executeCommand(command);
+                if (this.commandRegistry.isVisible(command)) {
+                    this._menu.getMenuItemById(command).checked = this.commandRegistry.isToggled(command);
+                    electron.remote.getCurrentWindow().setMenu(this._menu);
+                }
+            }
+        } catch {
+            // no-op
         }
     }
 
